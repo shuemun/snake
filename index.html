@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>snake 🍓🍵</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{--cream:#f8faf6;--warm-white:#f5fff8;--blush:#f5d5d8;--rose:#e0879a;--dusty-rose:#d06b82;--soft-pink:#f5b8c4;--mauve:#c98da0;--sage:#7bc4a8;--sky:#a3d4c4;--lavender:#d4a8c4;--butter:#e8d8a3;--peach:#f0b8a8;--terracotta:#b87878;--text:#3d4a42;--text-soft:#7a8f82;--text-faint:#a8bfb2;--glass:rgba(255,255,255,0.6);--glass-border:rgba(123,196,168,0.2);--shadow:rgba(61,74,66,0.06)}
+html{height:100%}
+body{background:var(--cream);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;display:flex;justify-content:center;align-items:center;overflow:hidden;position:relative}
+body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse at 20% 20%,rgba(245,184,196,0.2) 0%,transparent 50%),radial-gradient(ellipse at 80% 80%,rgba(123,196,168,0.15) 0%,transparent 50%),radial-gradient(ellipse at 60% 30%,rgba(212,168,196,0.08) 0%,transparent 40%);pointer-events:none}
+.petal{position:fixed;pointer-events:none;z-index:0;opacity:0;animation:petalFall linear infinite}
+@keyframes petalFall{0%{transform:translateY(-5vh) rotate(0deg) translateX(0);opacity:0}8%{opacity:0.07}85%{opacity:0.07}100%{transform:translateY(105vh) rotate(360deg) translateX(40px);opacity:0}}
+
+.game-wrapper{position:relative;z-index:1;display:flex;gap:22px;align-items:flex-start}
+.side-panel{width:152px;display:flex;flex-direction:column;gap:14px}
+.panel-box{background:var(--glass);border:1px solid var(--glass-border);border-radius:14px;padding:14px 16px;backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);box-shadow:0 2px 20px var(--shadow)}
+.panel-label{font-size:9px;font-weight:600;letter-spacing:2.5px;text-transform:uppercase;color:var(--text-faint);margin-bottom:6px}
+.score-value{font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:600;color:var(--dusty-rose)}
+.high-value{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:600;color:var(--sage)}
+.length-value{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:600;color:var(--lavender)}
+
+.board-container{position:relative;border-radius:16px;padding:3px;background:linear-gradient(145deg,rgba(245,184,196,0.2),rgba(123,196,168,0.18),rgba(212,168,196,0.1));box-shadow:0 8px 40px rgba(123,196,168,0.1),0 1px 3px rgba(61,74,66,0.05)}
+#game-canvas{display:block;border-radius:13px;background:var(--warm-white)}
+
+/* Face upload */
+.face-upload-area{display:flex;flex-direction:column;align-items:center;gap:8px}
+.face-preview{width:56px;height:56px;border-radius:50%;border:2px dashed var(--glass-border);display:flex;align-items:center;justify-content:center;overflow:hidden;cursor:pointer;transition:all 0.2s;background:var(--warm-white)}
+.face-preview:hover{border-color:var(--rose);border-style:solid}
+.face-preview img{width:100%;height:100%;object-fit:cover;border-radius:50%}
+.face-preview .placeholder{font-size:20px;color:var(--text-faint)}
+.upload-btn{font-family:'DM Sans',sans-serif;font-size:9px;font-weight:600;color:var(--text-faint);background:transparent;border:1px solid var(--glass-border);border-radius:8px;padding:5px 10px;cursor:pointer;transition:all 0.2s;letter-spacing:0.5px}
+.upload-btn:hover{border-color:var(--rose);color:var(--dusty-rose)}
+.clear-btn{font-family:'DM Sans',sans-serif;font-size:8px;color:var(--text-faint);background:none;border:none;cursor:pointer;text-decoration:underline;padding:2px}
+.clear-btn:hover{color:var(--dusty-rose)}
+#face-input{display:none}
+
+/* Themes */
+.theme-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.theme-btn{width:100%;aspect-ratio:1;border-radius:8px;border:2px solid transparent;cursor:pointer;transition:all 0.2s;position:relative;overflow:hidden}
+.theme-btn.active{border-color:var(--rose);box-shadow:0 0 8px rgba(123,196,168,0.3)}
+.theme-btn .swatch{width:100%;height:100%;border-radius:6px}
+
+/* Controls info */
+.controls-info{font-size:10px;line-height:2;color:var(--text-faint)}
+.controls-info kbd{display:inline-block;font-family:'DM Sans',sans-serif;font-size:9px;font-weight:600;color:var(--text-soft);background:rgba(123,196,168,0.08);border:1px solid rgba(123,196,168,0.12);border-radius:4px;padding:1px 5px;margin-right:2px}
+
+/* Overlays */
+.overlay{position:absolute;inset:3px;border-radius:13px;background:rgba(250,246,241,0.95);display:flex;flex-direction:column;justify-content:center;align-items:center;gap:16px;z-index:10;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);transition:opacity 0.4s ease}
+.overlay.hidden{opacity:0;pointer-events:none}
+.overlay h1{font-family:'Cormorant Garamond',serif;font-size:52px;font-weight:400;font-style:italic;color:var(--dusty-rose);letter-spacing:2px}
+.overlay h2{font-family:'Cormorant Garamond',serif;font-size:32px;font-weight:400;font-style:italic;color:var(--terracotta)}
+.overlay .final-score{font-family:'Cormorant Garamond',serif;font-size:18px;color:var(--dusty-rose)}
+.overlay .subtitle{font-size:12px;color:var(--text-faint);letter-spacing:1px}
+.name-input{font-family:'DM Sans',sans-serif;font-size:14px;font-weight:500;color:var(--text);text-align:center;padding:10px 20px;border:1.5px solid var(--glass-border);border-radius:20px;background:var(--warm-white);outline:none;width:200px;transition:border-color 0.2s}
+.name-input::placeholder{color:var(--text-faint)}
+.name-input:focus{border-color:var(--rose)}
+.start-btn{font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;letter-spacing:3px;padding:13px 44px;border:1.5px solid var(--rose);background:transparent;color:var(--dusty-rose);border-radius:30px;cursor:pointer;transition:all 0.3s;text-transform:uppercase}
+.start-btn:hover{background:var(--rose);color:white;box-shadow:0 4px 20px rgba(123,196,168,0.3);transform:translateY(-1px)}
+
+/* Mobile */
+.mobile-controls{display:none;position:fixed;bottom:14px;left:0;right:0;z-index:100;padding:0 30px}
+.mobile-row{display:flex;justify-content:center;gap:10px;margin-bottom:8px}
+.mobile-btn{width:56px;height:56px;border-radius:50%;border:1px solid var(--glass-border);background:var(--glass);color:var(--dusty-rose);font-size:20px;display:flex;align-items:center;justify-content:center;cursor:pointer;-webkit-tap-highlight-color:transparent;user-select:none;backdrop-filter:blur(10px);box-shadow:0 2px 10px var(--shadow)}
+.mobile-btn:active{background:rgba(242,212,208,0.4);border-color:var(--rose)}
+@media(max-width:720px){
+  .game-wrapper{flex-direction:column;align-items:center;gap:10px;transform:scale(0.75);transform-origin:center top}
+  .side-panel{flex-direction:row;width:auto;gap:8px;flex-wrap:wrap;justify-content:center}
+  .side-panel .panel-box{padding:10px 12px}
+  .side-panel.right{display:none}
+  .mobile-controls{display:block}
+  body{align-items:flex-start;padding-top:20px}
+}
+</style>
+</head>
+<body>
+<script>
+const pc=['✿','❀','♡','·','✧'];
+for(let i=0;i<10;i++){const el=document.createElement('div');el.className='petal';el.textContent=pc[i%pc.length];el.style.left=(Math.random()*100)+'%';el.style.fontSize=(10+Math.random()*14)+'px';el.style.animationDuration=(18+Math.random()*22)+'s';el.style.animationDelay=(Math.random()*20)+'s';el.style.color=['#e0879a','#7bc4a8','#d4a8c4','#f5b8c4'][i%4];document.body.appendChild(el);}
+</script>
+
+<div class="game-wrapper">
+  <!-- Left Panel -->
+  <div class="side-panel">
+    <div class="panel-box"><div class="panel-label">Score</div><div class="score-value" id="score">0</div></div>
+    <div class="panel-box"><div class="panel-label">Best</div><div class="high-value" id="high">0</div></div>
+    <div class="panel-box"><div class="panel-label">Length</div><div class="length-value" id="length">3</div></div>
+    <div class="panel-box">
+      <div class="panel-label">Your Face</div>
+      <div class="face-upload-area">
+        <div class="face-preview" id="face-preview" title="Click to upload"><span class="placeholder">🐍</span></div>
+        <button class="upload-btn" id="upload-btn">upload photo</button>
+        <button class="clear-btn" id="clear-btn" style="display:none">remove</button>
+        <input type="file" id="face-input" accept="image/*">
+      </div>
+    </div>
+  </div>
+
+  <!-- Board -->
+  <div class="board-container">
+    <canvas id="game-canvas" width="400" height="400"></canvas>
+    <div class="overlay" id="start-overlay">
+      <h1>snake</h1>
+      <div class="subtitle">eat · grow · don't crash</div>
+      <input type="text" class="name-input" id="name-input" placeholder="enter your name ♡" maxlength="15" autocomplete="off">
+      <button class="start-btn" id="start-btn">play</button>
+      <div class="controls-info" style="text-align:center;margin-top:6px">
+        <kbd>↑</kbd><kbd>↓</kbd><kbd>←</kbd><kbd>→</kbd> or <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> to move<br>
+        <kbd>P</kbd> pause · <kbd>M</kbd> mute
+      </div>
+    </div>
+    <div class="overlay hidden" id="gameover-overlay">
+      <h2>game over</h2>
+      <div class="final-score" id="final-score"></div>
+      <button class="start-btn" id="restart-btn">again</button>
+    </div>
+  </div>
+
+  <!-- Right Panel -->
+  <div class="side-panel right">
+    <div class="panel-box">
+      <div class="panel-label">Skin</div>
+      <div class="theme-grid" id="theme-grid"></div>
+    </div>
+    <div class="panel-box">
+      <div class="panel-label">Controls</div>
+      <div class="controls-info">
+        <kbd>↑</kbd><kbd>↓</kbd><kbd>←</kbd><kbd>→</kbd> move<br>
+        <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> move<br>
+        <kbd>P</kbd> pause<br>
+        <kbd>M</kbd> mute
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Mobile Controls -->
+<div class="mobile-controls">
+  <div class="mobile-row"><div class="mobile-btn" data-dir="up">▲</div></div>
+  <div class="mobile-row">
+    <div class="mobile-btn" data-dir="left">◀</div>
+    <div class="mobile-btn" data-dir="down">▼</div>
+    <div class="mobile-btn" data-dir="right">▶</div>
+  </div>
+</div>
+
+<script>
+(()=>{
+const COLS=20,ROWS=20,CELL=20;
+const canvas=document.getElementById('game-canvas');
+const ctx=canvas.getContext('2d');
+
+// ═══════ THEMES ═══════
+const themes=[
+  {name:'Strawberry',head:'#d06b82',body:'#e0879a',bodyAlt:'#f0a8b8',tail:'#f5d5d8',food:'#7bc4a8',glow:'rgba(224,135,154,0.4)'},
+  {name:'Matcha',head:'#5aab8a',body:'#7bc4a8',bodyAlt:'#9ad4bc',tail:'#c8e8da',food:'#e0879a',glow:'rgba(123,196,168,0.4)'},
+  {name:'Sakura',head:'#d4a8c4',body:'#e4c0d8',bodyAlt:'#f0d4e8',tail:'#f8e8f2',food:'#7bc4a8',glow:'rgba(212,168,196,0.4)'},
+  {name:'Mint Choc',head:'#6aaa90',body:'#98c4b0',bodyAlt:'#b8d8ca',tail:'#d8ece2',food:'#c98da0',glow:'rgba(106,170,144,0.4)'},
+  {name:'Rose Milk',head:'#c97088',body:'#e8a0b4',bodyAlt:'#f0bcc8',tail:'#f8d8e0',food:'#88c4a8',glow:'rgba(201,112,136,0.4)'},
+  {name:'Pistachio',head:'#80b898',body:'#a8d4bc',bodyAlt:'#c0e0d0',tail:'#daf0e4',food:'#e0879a',glow:'rgba(128,184,152,0.4)'},
+];
+let currentTheme=0;
+
+// Build theme grid
+const themeGrid=document.getElementById('theme-grid');
+themes.forEach((t,i)=>{
+  const btn=document.createElement('div');
+  btn.className='theme-btn'+(i===0?' active':'');
+  btn.innerHTML=`<div class="swatch" style="background:linear-gradient(135deg,${t.head},${t.body},${t.tail})"></div>`;
+  btn.title=t.name;
+  btn.addEventListener('click',(e)=>{
+    currentTheme=i;
+    document.querySelectorAll('.theme-btn').forEach((b,j)=>b.classList.toggle('active',j===i));
+    e.target.blur();
+  });
+  themeGrid.appendChild(btn);
+});
+
+// ═══════ FACE UPLOAD ═══════
+let faceImg=null;
+const facePreview=document.getElementById('face-preview');
+const faceInput=document.getElementById('face-input');
+const uploadBtn=document.getElementById('upload-btn');
+const clearBtn=document.getElementById('clear-btn');
+
+uploadBtn.addEventListener('click',()=>faceInput.click());
+facePreview.addEventListener('click',()=>faceInput.click());
+
+faceInput.addEventListener('change',(e)=>{
+  const file=e.target.files[0];
+  if(!file)return;
+  // Use object URL — handles any file size efficiently
+  const url=URL.createObjectURL(file);
+  const img=new Image();
+  img.onload=()=>{
+    // Compress to 100x100 square
+    const c=document.createElement('canvas');
+    c.width=100;c.height=100;
+    const cx=c.getContext('2d');
+    const s=Math.min(img.width,img.height);
+    const sx=(img.width-s)/2,sy=(img.height-s)/2;
+    cx.drawImage(img,sx,sy,s,s,0,0,100,100);
+    URL.revokeObjectURL(url);
+    const smallSrc=c.toDataURL('image/jpeg',0.7);
+    const smallImg=new Image();
+    smallImg.onload=()=>{
+      faceImg=smallImg;
+      facePreview.innerHTML=`<img src="${smallSrc}">`;
+      clearBtn.style.display='block';
+      uploadBtn.textContent='change photo';
+    };
+    smallImg.src=smallSrc;
+  };
+  img.onerror=()=>{URL.revokeObjectURL(url);alert('Could not load image. Try a different photo.');};
+  img.src=url;
+});
+
+clearBtn.addEventListener('click',()=>{
+  faceImg=null;
+  facePreview.innerHTML='<span class="placeholder">🐍</span>';
+  clearBtn.style.display='none';
+  uploadBtn.textContent='upload photo';
+  faceInput.value='';
+});
+
+// ═══════ SFX ═══════
+let sfxCtx=null,sfxGain=null,muted=false;
+function initSfx(){if(sfxCtx)return;sfxCtx=new(window.AudioContext||window.webkitAudioContext)();sfxGain=sfxCtx.createGain();sfxGain.gain.value=0.2;sfxGain.connect(sfxCtx.destination);}
+function sfxN(f,s,d,w='sine',v=0.12){if(!sfxCtx||muted)return;const o=sfxCtx.createOscillator(),g=sfxCtx.createGain();o.type=w;o.frequency.value=f;g.gain.setValueAtTime(v,s);g.gain.exponentialRampToValueAtTime(0.001,s+d-0.005);o.connect(g);g.connect(sfxGain);o.start(s);o.stop(s+d);}
+function sfxEat(){if(!sfxCtx||muted)return;const t=sfxCtx.currentTime;sfxN(523,t,0.06,'sine',0.15);sfxN(659,t+0.06,0.06,'sine',0.15);sfxN(784,t+0.12,0.1,'sine',0.12);}
+function sfxDie(){if(!sfxCtx||muted)return;const t=sfxCtx.currentTime;[400,320,250,180].forEach((f,i)=>sfxN(f,t+i*0.12,0.2,'triangle',0.12));}
+function sfxTurn(){if(!sfxCtx||muted)return;sfxN(600,sfxCtx.currentTime,0.025,'sine',0.06);}
+
+// ═══════ GAME STATE ═══════
+let snake,dir,nextDir,food,score,highScore=0,gameOver,paused,started;
+let gameLoop,speed,playerName='';
+
+function initGame(){
+  const mid=Math.floor(ROWS/2);
+  snake=[{x:5,y:mid},{x:4,y:mid},{x:3,y:mid}];
+  dir={x:1,y:0};
+  nextDir={x:1,y:0};
+  score=0;
+  gameOver=false;
+  paused=false;
+  speed=220;
+  spawnFood();
+  updateUI();
+}
+
+function spawnFood(){
+  let pos;
+  do{
+    pos={x:Math.floor(Math.random()*COLS),y:Math.floor(Math.random()*ROWS)};
+  }while(snake.some(s=>s.x===pos.x&&s.y===pos.y));
+  food=pos;
+}
+
+function update(){
+  if(gameOver||paused)return;
+  dir={...nextDir};
+  const head={x:snake[0].x+dir.x,y:snake[0].y+dir.y};
+
+  // Wall collision
+  if(head.x<0||head.x>=COLS||head.y<0||head.y>=ROWS){
+    die();return;
+  }
+  // Self collision
+  if(snake.some(s=>s.x===head.x&&s.y===head.y)){
+    die();return;
+  }
+
+  snake.unshift(head);
+
+  if(head.x===food.x&&head.y===food.y){
+    score+=10;
+    sfxEat();
+    spawnFood();
+    // Speed up slightly
+    if(speed>150) speed-=0.5;
+    clearInterval(gameLoop);
+    gameLoop=setInterval(update,speed);
+  } else {
+    snake.pop();
+  }
+  updateUI();
+  draw();
+}
+
+function die(){
+  gameOver=true;
+  sfxDie();
+  if(score>highScore){highScore=score;document.getElementById('high').textContent=highScore;}
+  document.getElementById('final-score').textContent=playerName+' · score: '+score+' · length: '+snake.length;
+  document.getElementById('gameover-overlay').classList.remove('hidden');
+  clearInterval(gameLoop);
+}
+
+function updateUI(){
+  document.getElementById('score').textContent=score;
+  document.getElementById('length').textContent=snake.length;
+}
+
+// ═══════ DRAWING ═══════
+function draw(){
+  const t=themes[currentTheme];
+  // Background
+  ctx.fillStyle='#f5fff8';
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+
+  // Subtle grid
+  ctx.fillStyle='rgba(123,196,168,0.04)';
+  for(let x=0;x<COLS;x++)for(let y=0;y<ROWS;y++){
+    if((x+y)%2===0){ctx.fillRect(x*CELL,y*CELL,CELL,CELL);}
+  }
+
+  // Food with glow
+  ctx.shadowColor=t.glow;ctx.shadowBlur=12;
+  ctx.fillStyle=t.food;
+  ctx.beginPath();
+  ctx.arc(food.x*CELL+CELL/2,food.y*CELL+CELL/2,CELL/2-2,0,Math.PI*2);
+  ctx.fill();
+  // Food shine
+  ctx.fillStyle='rgba(255,255,255,0.35)';
+  ctx.beginPath();
+  ctx.arc(food.x*CELL+CELL/2-2,food.y*CELL+CELL/2-2,CELL/5,0,Math.PI*2);
+  ctx.fill();
+  ctx.shadowBlur=0;
+
+  // Snake body (draw tail to head so head is on top)
+  for(let i=snake.length-1;i>=0;i--){
+    const s=snake[i];
+    const px=s.x*CELL,py=s.y*CELL;
+    const progress=i/(snake.length-1||1);
+
+    if(i===0){
+      // Head
+      ctx.shadowColor=t.glow;ctx.shadowBlur=8;
+      const headSize=faceImg?CELL*1.6:CELL;
+      const headOffset=(headSize-CELL)/2;
+
+      if(faceImg){
+        // Custom face — draw larger
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(px+CELL/2,py+CELL/2,headSize/2,0,Math.PI*2);
+        ctx.clip();
+        ctx.drawImage(faceImg,px-headOffset,py-headOffset,headSize,headSize);
+        ctx.restore();
+        // Border
+        ctx.strokeStyle=t.head;
+        ctx.lineWidth=2.5;
+        ctx.beginPath();
+        ctx.arc(px+CELL/2,py+CELL/2,headSize/2-1,0,Math.PI*2);
+        ctx.stroke();
+      } else {
+        // Default head
+        ctx.fillStyle=t.head;
+        ctx.beginPath();
+        ctx.arc(px+CELL/2,py+CELL/2,CELL/2,0,Math.PI*2);
+        ctx.fill();
+        // Eyes
+        const ex=dir.x*3,ey=dir.y*3;
+        ctx.fillStyle='white';
+        ctx.beginPath();ctx.arc(px+CELL/2-3+ex,py+CELL/2-2+ey,2.5,0,Math.PI*2);ctx.fill();
+        ctx.beginPath();ctx.arc(px+CELL/2+3+ex,py+CELL/2-2+ey,2.5,0,Math.PI*2);ctx.fill();
+        ctx.fillStyle='#3d4a42';
+        ctx.beginPath();ctx.arc(px+CELL/2-3+ex*1.2,py+CELL/2-2+ey*1.2,1.2,0,Math.PI*2);ctx.fill();
+        ctx.beginPath();ctx.arc(px+CELL/2+3+ex*1.2,py+CELL/2-2+ey*1.2,1.2,0,Math.PI*2);ctx.fill();
+      }
+      ctx.shadowBlur=0;
+    } else {
+      // Body segments — gradient from body to tail color
+      const blend=i/snake.length;
+      const col=blend<0.5?t.body:(blend<0.8?t.bodyAlt:t.tail);
+      const radius=CELL/2-1-(i/snake.length)*2;
+
+      ctx.fillStyle=col;
+      ctx.beginPath();
+      ctx.arc(px+CELL/2,py+CELL/2,Math.max(radius,CELL/4),0,Math.PI*2);
+      ctx.fill();
+
+      // Subtle shine on body
+      ctx.fillStyle='rgba(255,255,255,0.2)';
+      ctx.beginPath();
+      ctx.arc(px+CELL/2-1,py+CELL/2-1,Math.max(radius-3,2),0,Math.PI*2);
+      ctx.fill();
+    }
+  }
+}
+
+// ═══════ INPUT ═══════
+function setDir(dx,dy){
+  if(dir.x===-dx&&dir.y===-dy) return; // can't reverse
+  if(dir.x===dx&&dir.y===dy) return; // same dir
+  nextDir={x:dx,y:dy};
+  sfxTurn();
+}
+
+function handleKey(e){
+  if(e.target.tagName==='INPUT')return;
+  if(!started||gameOver)return;
+
+  if(e.code==='KeyP'){
+    paused=!paused;
+    e.preventDefault();
+    return;
+  }
+  if(e.code==='KeyM'){
+    muted=!muted;
+    e.preventDefault();
+    return;
+  }
+  if(paused)return;
+
+  switch(e.code){
+    case'ArrowUp':case'KeyW':setDir(0,-1);e.preventDefault();break;
+    case'ArrowDown':case'KeyS':setDir(0,1);e.preventDefault();break;
+    case'ArrowLeft':case'KeyA':setDir(-1,0);e.preventDefault();break;
+    case'ArrowRight':case'KeyD':setDir(1,0);e.preventDefault();break;
+  }
+}
+
+document.addEventListener('keydown',handleKey);
+window.addEventListener('keydown',handleKey);
+// Prevent canvas/buttons from stealing focus
+canvas.addEventListener('focus',()=>canvas.blur());
+document.querySelectorAll('button:not(.start-btn):not(.upload-btn):not(.clear-btn)').forEach(b=>b.addEventListener('focus',()=>b.blur()));
+
+// Mobile
+document.querySelectorAll('.mobile-btn').forEach(btn=>{
+  btn.addEventListener('touchstart',e=>{
+    e.preventDefault();
+    if(!started||gameOver||paused)return;
+    const d=btn.dataset.dir;
+    if(d==='up')setDir(0,-1);
+    if(d==='down')setDir(0,1);
+    if(d==='left')setDir(-1,0);
+    if(d==='right')setDir(1,0);
+  });
+});
+
+// Touch swipe on canvas
+let touchStart=null;
+canvas.addEventListener('touchstart',e=>{touchStart={x:e.touches[0].clientX,y:e.touches[0].clientY};},{passive:true});
+canvas.addEventListener('touchend',e=>{
+  if(!touchStart||!started||gameOver||paused)return;
+  const dx=e.changedTouches[0].clientX-touchStart.x;
+  const dy=e.changedTouches[0].clientY-touchStart.y;
+  if(Math.abs(dx)>Math.abs(dy)){
+    if(dx>20)setDir(1,0); else if(dx<-20)setDir(-1,0);
+  } else {
+    if(dy>20)setDir(0,1); else if(dy<-20)setDir(0,-1);
+  }
+  touchStart=null;
+},{passive:true});
+
+// ═══════ START / RESTART ═══════
+document.getElementById('name-input').addEventListener('keydown',e=>{if(e.code==='Enter'){document.getElementById('start-btn').click();e.preventDefault();}e.stopPropagation();});
+
+document.getElementById('start-btn').addEventListener('click',()=>{
+  playerName=document.getElementById('name-input').value.trim()||'player';
+  document.getElementById('start-overlay').classList.add('hidden');
+  started=true;
+  initSfx();
+  initGame();
+  draw();
+  gameLoop=setInterval(update,speed);
+});
+
+document.getElementById('restart-btn').addEventListener('click',()=>{
+  document.getElementById('gameover-overlay').classList.add('hidden');
+  initGame();
+  draw();
+  gameLoop=setInterval(update,speed);
+});
+
+// Initial draw
+ctx.fillStyle='#f5fff8';ctx.fillRect(0,0,canvas.width,canvas.height);
+document.getElementById('name-input').focus();
+})();
+</script>
+</body>
+</html>
